@@ -88,8 +88,6 @@ namespace vorb {
              * @return the SpriteFont
              */
             virtual const vg::SpriteFont* getDefaultFont() const { return m_defaultFont; }
-            vg::SpriteBatch m_defaultSb; ///< Default SpriteBatch if none specified
-
         protected:
             struct DrawableFuncs {
                 const Widget* owner;
@@ -102,6 +100,7 @@ namespace vorb {
             std::vector<DrawableFuncs> m_drawableFuncs; ///< The Ith widget is the widget that owns the Ith DrawFunc
             VGTexture m_defaultTexture = 0; ///< Default texture if drawable doesn't have one
             vg::SpriteFont* m_defaultFont = nullptr; ///< Default font if drawable doesn't have one
+            vg::SpriteBatch m_defaultSb; ///< Default SpriteBatch if none specified
             vg::SpriteBatch* m_sb = nullptr; ///< SpriteBatch used for rendering
             bool m_shouldRenderToTexture = false; ///< When true, renders to a framebuffer instead
         };

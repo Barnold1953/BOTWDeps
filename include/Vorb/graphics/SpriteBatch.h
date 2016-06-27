@@ -60,8 +60,6 @@ namespace vorb {
             SpriteBatch(bool isDynamic = true, bool init = false);
             ~SpriteBatch();
 
-            size_t DEBUG_S() { return m_glyphPtrs.size(); }
-
             void init();
             void dispose();
 

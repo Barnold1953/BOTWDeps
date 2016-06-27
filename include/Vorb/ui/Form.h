@@ -81,9 +81,9 @@ namespace vorb {
              * @return true if callbackName was the name of a function
              */
             virtual bool registerCallback(Widget* w, nString callback) { return false; }
-            UIRenderer m_renderer; ///< The UI Renderer.
 
         protected:
+            UIRenderer m_renderer; ///< The UI Renderer.
             IGameScreen* m_ownerIGameScreen = nullptr; ///< The Owning screen.
         };
     }
