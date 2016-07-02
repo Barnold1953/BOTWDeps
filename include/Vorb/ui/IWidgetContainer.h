@@ -36,6 +36,7 @@ namespace vorb {
         struct MouseMotionEvent;
         struct MouseEvent;
         class Widget;
+        class Form;
 
         //! Bitfield of container styling flags
         struct ContainerStyle {
@@ -43,6 +44,7 @@ namespace vorb {
             bool fixedWidth : 1; ///< If true, the control has fixed width when auto-scaled.
             bool selectable : 1; ///< If true, the control can receive focus.
         };
+
         //! Bitfield of anchor flags
         struct AnchorStyle {
             bool left : 1; ///< If true, anchored to the left of parent
@@ -50,9 +52,27 @@ namespace vorb {
             bool bottom : 1; ///< If true, anchored to the bottom of parent
             bool top : 1; ///< If true, anchored to the top of parent
         };
-        //! Bitfield of dock flags
-        enum class DockStyle {
-            NONE = 0, LEFT, RIGHT, BOTTOM, TOP, FILL
+
+        //! Bitfield of clipping options.
+        struct ClippingOptions {
+            ClippingOptions() : left{ true },
+                top{ true },
+                right{ true },
+                bottom{ true }
+            {
+            }
+            ClippingOptions(bool left, bool top, bool right, bool bottom) : 
+                left{ left },
+                top{ top },
+                right{ right },
+                bottom{ bottom }
+            {
+            }
+
+            bool left : 1;
+            bool top : 1;
+            bool right : 1;
+            bool bottom : 1;
         };
 
         class IWidgetContainer {
@@ -72,12 +92,6 @@ namespace vorb {
              * Gets called in the destructor.
              */
             virtual void dispose();
-            /*! @brief Adds a child Widget to the container
-             *
-             * @param child: The Widget to add
-             * @return true on success.
-             */
-            virtual bool addWidget(Widget* child);
             /*! @brief Removes a Widget from the container
             *
             * @param child: The Widget to remove
@@ -85,14 +99,25 @@ namespace vorb {
             */
             virtual bool removeWidget(Widget* child);
 
-            /*! @brief Defines how relative position is used to update position.
-             *  The simplest form could be m_position = m_relativePosition;
-             */
-            virtual void updatePosition() = 0;
             /*! @brief Enables events* */
             virtual void enable();
             /*! @brief Disables events* */
             virtual void disable();
+
+            /*! @brief Updates all spatial state. I.e. position, dimensions, clipping and the same for children. */
+            void updateSpatialState();
+            /*! @brief Updates position spatial state. I.e. position, clipping and same for children. */
+            void updatePositionState();
+            /*! @brief Updates dimension spatial state. I.e. dimensions, clipping and same for children. */
+            void updateDimensionState();
+            /*! @brief Updates clipping for both this widget container and its children. */
+            void updateClippingState();
+            /*! @brief Updates the ordered child widget collection.
+            *
+            * @param changedChild: If provided, function assumes only that child changed and only replaces that child.
+            */
+            void updateZIndexState(Widget* changedChild = nullptr);
+
             /*! @brief Checks if a point is inside the container
              *
              * @param point: The point to check
@@ -101,11 +126,11 @@ namespace vorb {
             virtual bool isInBounds(const f32v2& point) const { return isInBounds(point.x, point.y); }
             virtual bool isInBounds(f32 x, f32 y) const;
 
-            virtual void setChildDock(Widget* widget, DockStyle dockStyle);
-
             /************************************************************************/
             /* Getters                                                              */
             /************************************************************************/
+            virtual Form* getParentForm() const { return m_parentForm; }
+            virtual Widget* getParentWidget() const { return m_parentWidget; }
             virtual bool getFixedHeight() const { return m_style.fixedHeight; }
             virtual bool getFixedWidth() const { return m_style.fixedWidth; }
             virtual bool getSelectable() const { return m_style.selectable; }
@@ -118,29 +143,35 @@ namespace vorb {
             virtual const f32& getY() const { return m_position.y; }
             virtual const f32v2& getDimensions() const { return m_dimensions; }
             virtual const f32v2& getPosition() const { return m_position; }
-            virtual const f32v2& getRelativePosition() const { return m_relativePosition; }
-            virtual const std::vector<Widget*>& getWidgets() const { return m_widgets; }
+            virtual const SortedVector<Widget*, true, bool(*)(Widget*, Widget*)>& getWidgets() const { return m_widgets; }
             virtual const nString& getName() const { return m_name; }
             virtual f32v4 getDestRect() const { return f32v4(m_position.x, m_position.y, m_dimensions.x, m_dimensions.y); }
+            virtual const ClippingOptions& getOverflowOptions() const { return m_clippingOptions; }
             virtual f32v4 getClipRect() const { return m_clipRect; }
-            virtual const bool& getClippingEnabled() const { return m_isClippingEnabled; }
 
             /************************************************************************/
             /* Setters                                                              */
-            /************************************************************************/         
+            /************************************************************************/
+            virtual void setParentForm(Form* form);
+            virtual void setParentWidget(Widget* parent, Widget* self);
             virtual void setDestRect(const f32v4& destRect);
-            virtual void setDimensions(const f32v2& dimensions) { m_dimensions = dimensions; updateChildPositions(); }
+            virtual void setDimensions(const f32v2& dimensions) { m_dimensions = dimensions; updateDimensionState(); }
             virtual void setFixedHeight(bool fixedHeight) { m_style.fixedHeight = fixedHeight; }
             virtual void setFixedWidth(bool fixedWidth) { m_style.fixedWidth = fixedWidth; }
-            virtual void setHeight(f32 height) { m_dimensions.y = height;  updateChildPositions(); }
-            virtual void setPosition(const f32v2& position) { m_relativePosition = position; updatePosition(); }
+            virtual void setHeight(f32 height) { m_dimensions.y = height;  updateDimensionState(); }
+            virtual void setWidth(f32 width) { m_dimensions.x = width;  updateDimensionState(); }
+            virtual void setPosition(const f32v2& position) { m_position = position; updatePositionState(); }
+            virtual void setX(f32 x) { m_position.x = x; updatePositionState(); }
+            virtual void setY(f32 y) { m_position.y = y; updatePositionState(); }
             virtual void setSelectable(bool selectable) { m_style.selectable = selectable; }
             virtual void setStyle(const ContainerStyle& style) { m_style = style; }
-            virtual void setWidth(f32 width) { m_dimensions.x = width;  updateChildPositions(); }
-            virtual void setX(f32 x) { m_relativePosition.x = x; updatePosition(); }
-            virtual void setY(f32 y) { m_relativePosition.y = y; updatePosition(); }
             virtual void setName(const nString& name) { m_name = name; }
-            virtual void setClippingEnabled(bool isClippingEnabled) { m_isClippingEnabled = isClippingEnabled; updatePosition(); }
+            virtual void setClipping(const ClippingOptions& clippingOptions) { m_clippingOptions = clippingOptions; updateClippingState(); }
+            virtual void setClipping(bool clipping) { m_clippingOptions = ClippingOptions(clipping, clipping, clipping, clipping); updateClippingState(); }
+            virtual void setClippingTop(bool clipping) { m_clippingOptions.top = clipping; updateClippingState(); }
+            virtual void setClippingRight(bool clipping) { m_clippingOptions.right = clipping; updateClippingState(); }
+            virtual void setClippingBottom(bool clipping) { m_clippingOptions.bottom = clipping; updateClippingState(); }
+            virtual void setClippingLeft(bool clipping) { m_clippingOptions.left = clipping; updateClippingState(); }
 
             /************************************************************************/
             /* Events                                                               */
@@ -154,14 +185,27 @@ namespace vorb {
             // TODO(Ben): Lots more events!
 
         protected:
-            /*! Removes a widget from a dock and returns true on success. */
-            bool removeChildFromDock(Widget* widget);
-            /*! Refreshes all docked widget positions and sizes. */
-            void recalculateDockedWidgets();
-            /*! Computes clipping for rendering and propagates through children. */
-            virtual void computeClipRect(const f32v4& parentClipRect = f32v4(-(FLT_MAX / 2.0f), -(FLT_MAX / 2.0f), FLT_MAX, FLT_MAX));
-            virtual void computeChildClipRects();
-            virtual void updateChildPositions();
+            /*! @brief Adds a child Widget to the container
+            *
+            * @param child: The Widget to add
+            * @return true on success.
+            */
+            virtual bool addWidget(Widget* child, Widget* self);
+            virtual bool addWidget(Widget* child, Form* self);
+            
+            /*! @brief Computes clipping for this widget container. */
+            virtual void computeClipRect();
+
+
+            /*! @brief Calls updateSpatialState on all children. */
+            virtual void updateChildSpatialStates();
+            /*! @brief Calls updateClippingState on all children. */
+            virtual void updateChildClippingStates();
+
+            /*! @brief Defines how raw position is used to process the actual position. */
+            virtual void updatePosition() = 0;
+            /*! @brief Defines how raw dimensions are used to process the actual dimensions. */
+            virtual void updateDimensions() = 0;
             /************************************************************************/
             /* Event Handlers                                                       */
             /************************************************************************/
@@ -184,18 +228,23 @@ namespace vorb {
 
             /************************************************************************/
             /* Members                                                              */
-            /************************************************************************/      
+            /************************************************************************/
             ContainerStyle m_style; ///< The current style.
-            std::vector<Widget*> m_widgets; ///< All child widgets.
-            std::vector<Widget*> m_dockedWidgets[5]; ///< Widgets that are docked. TODO(Ben): Linked list instead?
-            f32v4 m_clipRect = f32v4(-(FLT_MAX / 2.0f), -(FLT_MAX / 2.0f), FLT_MAX, FLT_MAX);
-            f32v4 m_dockSizes = f32v4(0.0f); ///< Total size of each dock other than fill.
-            f32v2 m_relativePosition = f32v2(0.0f); ///< Position relative to parent.
-            f32v2 m_position = f32v2(0.0f); ///< The position and dimensions.
-            f32v2 m_dimensions = f32v2(0.0f); ///< The position and dimensions.
+            Form* m_parentForm = nullptr; ///< Parent form.
+            Widget* m_parentWidget = nullptr; ///< Parent widget.
+
+            // TODO(Matthew): Do we need to store widgets both ways? Probably not...
+            //std::vector<Widget*> m_widgets; ///< All child widgets in order of creation.
+            
+            bool(*m_zIndexCompare)(Widget*, Widget*);
+            SortedVector<Widget*, true, bool(*)(Widget*, Widget*)> m_widgets; ///< Child widgets in order of Z-index.
+
+            f32v4 m_clipRect = f32v4(-(FLT_MAX / 2.0f), -(FLT_MAX / 2.0f), FLT_MAX, FLT_MAX); ///< The clipping rectangle of the container.
+            f32v2 m_position = f32v2(0.0f); ///< The position of the container.
+            f32v2 m_dimensions = f32v2(0.0f); ///< The dimensions of the container.
             nString m_name = ""; ///< Display name of the container.
 
-            bool m_isClippingEnabled = true;
+            ClippingOptions m_clippingOptions; ///< Determines directions in which clipping may or may not occur.
 
             // TODO(Ben): Bitfield for memory reduction?.
             bool m_isClicking = false; ///< Used for click event tracking.

@@ -28,6 +28,7 @@
 #include "IWidgetContainer.h"
 #include "UIRenderer.h"
 #include "IGameScreen.h"
+#include "GameWindow.h"
 
 DECL_VG(class SpriteFont; class SpriteBatch)
 
@@ -50,21 +51,20 @@ namespace vorb {
              * @param defaultFont: The optional default font to use.
              * @param defaultFont: The optional SpriteBatch to use.
              */
-            virtual void init(const nString& name, IGameScreen* ownerScreen, const f32v4& destRect, vg::SpriteFont* defaultFont = nullptr, vg::SpriteBatch* spriteBatch = nullptr);
+            // TODO(Matthew): Need to get screen size in a better way than this.
+            virtual void init(const nString& name, IGameScreen* ownerScreen, const GameWindow* viewport, const f32v4& destRect, vg::SpriteFont* defaultFont = nullptr, vg::SpriteBatch* spriteBatch = nullptr);
             /*! @brief Adds a widget to the Form and initializes it for rendering.
              * 
              * @param widget: The Widget to add.
              * @return true on success.
              */
-            virtual bool addWidget(Widget* widget) override;
+            virtual bool addWidget(Widget* widget);
             /*! @brief Removes a widget from the Form.
             *
             * @param widget: The Widget to remove.
             * @return true on success.
             */
             virtual bool removeWidget(Widget* widget) override;
-            /* Updates the position of the Form. */
-            virtual void updatePosition() override;
             /*! @brief Updates all the widgets in the Form.
              * 
              * @param dt: deltatime
@@ -75,6 +75,9 @@ namespace vorb {
             /*! @brief Frees all resources. */
             virtual void dispose() override;
 
+            /*! @brief Recalculates order of drawables based on Z-index. */
+            virtual void updateDrawableOrderState();
+
             /*! @brief Registers a custom callback with a widget event.
              * Override this in custom forms to set up callbacks
              * @param callbackName: Name of the custom callback 
@@ -83,6 +86,12 @@ namespace vorb {
             virtual bool registerCallback(Widget* w, nString callback) { return false; }
 
         protected:
+            /* Updates the position of the Form. */
+            virtual void updatePosition() override {}
+            /* Updates the dimensions of the Form. */
+            virtual void updateDimensions() override {}
+
+            const GameWindow* m_viewport;
             UIRenderer m_renderer; ///< The UI Renderer.
             IGameScreen* m_ownerIGameScreen = nullptr; ///< The Owning screen.
         };

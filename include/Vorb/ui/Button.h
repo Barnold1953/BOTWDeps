@@ -51,7 +51,16 @@ namespace vorb {
             * @param name: Name of the control.
             * @param destRect: Rectangle defining the position and dimensions as the tuple <x,y,w,h>.
             */
-            Button(IWidgetContainer* parent, const nString& name, const f32v4& destRect = f32v4(0));
+            Button(Widget* parent, const nString& name, const f32v4& destRect = f32v4(0));
+            /*! @brief Constructor that sets parent control, name, position, and dimensions.
+            *
+            * The control will be made a child of parent.
+            *
+            * @param parent: Parent control object.
+            * @param name: Name of the control.
+            * @param destRect: Rectangle defining the position and dimensions as the tuple <x,y,w,h>.
+            */
+            Button(Form* parent, const nString& name, const f32v4& destRect = f32v4(0));
             /*! @brief Default destructor. */
             virtual ~Button(); // TODO(Ben): Maybe make abstract?
 
@@ -60,9 +69,6 @@ namespace vorb {
             * @param renderer: UIRenderer to add to
             */
             virtual void addDrawables(UIRenderer* renderer) override;
-
-            /*! @brief Updates the position relative to parent */
-            virtual void updatePosition() override;
 
             /************************************************************************/
             /* Getters                                                              */
@@ -100,9 +106,18 @@ namespace vorb {
             virtual void setTextScale(const f32v2& textScale);
 
         protected:
+            /*! @brief Updates the position of the button. */
+            virtual void updatePosition() override;
+            /*! @brief Updates the dimensions of the button. */
+            virtual void updateDimensions() override;
+            /*! @brief Computes the clipping rectangle of the button. */
+            virtual void computeClipRect() override;
+
             virtual void updateColor();
             virtual void updateTextPosition();
             virtual void refreshDrawables();
+
+            virtual void updateDrawableSpatialState();
 
             virtual void onMouseMove(Sender s, const MouseMotionEvent& e) override;
             virtual void onMouseFocusLost(Sender s, const MouseEvent& e) override;
